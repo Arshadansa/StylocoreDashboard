@@ -10,7 +10,6 @@ function AddPackage() {
   const [price, setPrice] = useState("");
   const [days, setDays] = useState("");
   const [nights, setNights] = useState("");
-  const [images, setImages] = useState([]);
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -18,10 +17,10 @@ function AddPackage() {
   const [rating, setRating] = useState(0);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [packages, setPackages] = useState([]);
-  const [isPopupOpen, setIsPopupOpen] = useState(false); // For the image upload popup
-  const [uploadedImages, setUploadedImages] = useState([]); // To store uploaded images
+  const [uploadedImages, setUploadedImages] = useState([]); // Array to store uploaded image URLs
   const [selectedImages, setSelectedImages] = useState([]); // Images selected from gallery
   const [errorMessage, setErrorMessage] = useState("");
+  const [isPopupOpen, setIsPopupOpen] = useState(false); // For the image upload popup
   const [isModifyPopupOpen, setIsModifyPopupOpen] = useState(false); // Popup for modifying packages
   const [editingPackage, setEditingPackage] = useState(null); // The package being edited
 
@@ -39,7 +38,7 @@ function AddPackage() {
     fetchPackages();
   }, []);
 
-  // Fetch images from Firebase Storage
+  // Fetch images from Firebase Storage for gallery
   useEffect(() => {
     const fetchUploadedImages = async () => {
       const listRef = ref(storage, "uploadedImages/");
@@ -72,19 +71,9 @@ function AddPackage() {
       },
       async () => {
         const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-        setUploadedImages((prevImages) => [...prevImages, downloadURL]);
+        setUploadedImages((prevImages) => [...prevImages, downloadURL]); // Store the uploaded image URLs
       }
     );
-  };
-
-  // Open image upload popup
-  const handleOpenPopup = () => {
-    setIsPopupOpen(true);
-  };
-
-  // Close image upload popup
-  const handleClosePopup = () => {
-    setIsPopupOpen(false);
   };
 
   // Handle selecting images from the gallery
@@ -98,7 +87,7 @@ function AddPackage() {
     }
   };
 
-  // Submit selected images for the package
+  // Submit the package with selected images stored in Firestore document
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -108,7 +97,8 @@ function AddPackage() {
     }
 
     try {
-      const packageRef = await addDoc(collection(db, "packages"), {
+      // Add package details along with image links to Firestore
+      await addDoc(collection(db, "packages"), {
         title,
         location,
         category,
@@ -120,10 +110,11 @@ function AddPackage() {
         endDate,
         mapLink,
         rating,
-        images: selectedImages,
+        imageLinks: selectedImages, // Store the selected image URLs array in the same document
       });
 
       alert("Package added successfully!");
+      setSelectedImages([]); // Clear selected images after successful submission
     } catch (error) {
       console.error("Error adding package: ", error);
     }
@@ -133,6 +124,14 @@ function AddPackage() {
   const handleModify = (packageData) => {
     setEditingPackage(packageData);
     setIsModifyPopupOpen(true);
+  };
+
+  // Handle changes in the modify popup form
+  const handleChange = (e) => {
+    setEditingPackage({
+      ...editingPackage,
+      [e.target.name]: e.target.value,
+    });
   };
 
   // Handle update on package modification
@@ -155,14 +154,6 @@ function AddPackage() {
       setPackages(packages.filter((pkg) => pkg.id !== id));
       alert("Package deleted successfully!");
     }
-  };
-
-  // Handle changes in the modify popup form
-  const handleChange = (e) => {
-    setEditingPackage({
-      ...editingPackage,
-      [e.target.name]: e.target.value,
-    });
   };
 
   return (
@@ -243,7 +234,7 @@ function AddPackage() {
 
           <button
             type="button"
-            onClick={handleOpenPopup}
+            onClick={() => setIsPopupOpen(true)} // Open the popup for image upload
             className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-900 transition duration-300"
           >
             Upload Images
@@ -293,7 +284,7 @@ function AddPackage() {
 
             <div className="mt-4 flex justify-end">
               <button
-                onClick={handleClosePopup}
+                onClick={() => setIsPopupOpen(false)}
                 className="bg-black hover:bg-gray-900 text-white px-4 py-2 rounded-lg transition duration-300"
               >
                 Close
@@ -320,7 +311,7 @@ function AddPackage() {
               <tr key={pkg.id}>
                 <td className="border border-gray-800 p-3">{pkg.title}</td>
                 <td className="border border-gray-800 p-3">{pkg.location}</td>
-                <td className="border border-gray-800 p-3">{pkg.price}</td>
+                <td className="border border-gray-800 p-3">${pkg.price}</td>
                 <td className="border border-gray-800 p-3">
                   <button
                     onClick={() => handleModify(pkg)}
