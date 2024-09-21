@@ -4,15 +4,15 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAPKeA90m_gdbBEtSejTz2MXnPXOaiRbEE",
-  authDomain: "rangstone-8a3e8.firebaseapp.com",
-  databaseURL: "https://rangstone-8a3e8-default-rtdb.firebaseio.com",
-  projectId: "rangstone-8a3e8",
-  storageBucket: "rangstone-8a3e8.appspot.com",
-  messagingSenderId: "303718575005",
-  appId: "1:303718575005:web:d02e45d190d12be607dd74",
-  measurementId: "G-PGMZ4E0NJC"
+  apiKey: "AIzaSyA9z67dLECayHwJOim0AuJdldi8iaLr5nQ",
+  authDomain: "stylacor.firebaseapp.com",
+  projectId: "stylacor",
+  storageBucket: "stylacor.appspot.com",
+  messagingSenderId: "326785066179",
+  appId: "1:326785066179:web:1d8fad5e87cb3fce752e76",
+  measurementId: "G-3B1MF40M33"
 };
+
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);

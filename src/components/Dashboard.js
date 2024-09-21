@@ -7,8 +7,8 @@ function Dashboard() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const adminEmail = "admin@rangstone.com";
-  const adminPassword = "rangstone@123";
+  const adminEmail = "admin@Stylocore.com";
+  const adminPassword = "Stylocore@123";
 
   // Check localStorage to see if the user is already logged in
   useEffect(() => {
@@ -41,7 +41,9 @@ function Dashboard() {
 
   return (
     <div className="container mx-auto p-8">
-      <h1 className="text-4xl font-semibold text-gray-800 mb-10 text-center">Tour Package Dashboard</h1>
+      <h1 className="text-4xl font-semibold text-gray-800 mb-10 text-center">
+        Stylocore Dashboard
+      </h1>
 
       {/* Login Popup */}
       {showLogin && !isLoggedIn && (
@@ -77,12 +79,23 @@ function Dashboard() {
         <div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
             <Link
-              to="/add-package"
+              to="/add-product"
               className="border border-gray-800 text-gray-800 p-6 rounded-lg text-center transition-transform transform hover:scale-105 hover:bg-gray-800 hover:text-white"
             >
-              Add New Tour Package
+              Add New Products
             </Link>
-
+            <Link
+              to="/update-product"
+              className="border border-gray-800 text-gray-800 p-6 rounded-lg text-center transition-transform transform hover:scale-105 hover:bg-gray-800 hover:text-white"
+            >
+              Update Products
+            </Link>
+            <Link
+              to="/category"
+              className="border border-gray-800 text-gray-800 p-6 rounded-lg text-center transition-transform transform hover:scale-105 hover:bg-gray-800 hover:text-white"
+            >
+              Add Category
+            </Link>
             <Link
               to="/manage-bookings"
               className="border border-gray-800 text-gray-800 p-6 rounded-lg text-center transition-transform transform hover:scale-105 hover:bg-gray-800 hover:text-white"

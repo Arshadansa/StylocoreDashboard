@@ -1,391 +1,513 @@
 import React, { useState, useEffect } from "react";
-import { db, storage } from "../firebase";
-import { collection, addDoc, getDocs, doc, deleteDoc, updateDoc } from "firebase/firestore";
-import { ref, uploadBytesResumable, getDownloadURL, listAll } from "firebase/storage";
+import { db, storage } from "../firebase"; // Import Firestore and Firebase Storage
+import { doc, setDoc, collection, getDocs } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-function AddPackage() {
-  const [title, setTitle] = useState("");
-  const [location, setLocation] = useState("");
-  const [category, setCategory] = useState("");
-  const [price, setPrice] = useState("");
-  const [days, setDays] = useState("");
-  const [nights, setNights] = useState("");
-  const [description, setDescription] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [mapLink, setMapLink] = useState("");
-  const [rating, setRating] = useState(0);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [packages, setPackages] = useState([]);
-  const [uploadedImages, setUploadedImages] = useState([]); // Array to store uploaded image URLs
-  const [selectedImages, setSelectedImages] = useState([]); // Images selected from gallery
-  const [errorMessage, setErrorMessage] = useState("");
-  const [isPopupOpen, setIsPopupOpen] = useState(false); // For the image upload popup
-  const [isModifyPopupOpen, setIsModifyPopupOpen] = useState(false); // Popup for modifying packages
-  const [editingPackage, setEditingPackage] = useState(null); // The package being edited
-
-  // Fetch existing packages from Firestore
-  useEffect(() => {
-    const fetchPackages = async () => {
-      const querySnapshot = await getDocs(collection(db, "packages"));
-      const fetchedPackages = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setPackages(fetchedPackages);
-    };
-
-    fetchPackages();
-  }, []);
-
-  // Fetch images from Firebase Storage for gallery
-  useEffect(() => {
-    const fetchUploadedImages = async () => {
-      const listRef = ref(storage, "uploadedImages/");
-      const res = await listAll(listRef);
-      const urls = await Promise.all(
-        res.items.map((itemRef) => getDownloadURL(itemRef))
-      );
-      setUploadedImages(urls);
-    };
-
-    fetchUploadedImages();
-  }, []);
-
-  // Handle image uploads
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const storageRef = ref(storage, `uploadedImages/${file.name}`);
-    const uploadTask = uploadBytesResumable(storageRef, file);
-
-    uploadTask.on(
-      "state_changed",
-      (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        setUploadProgress(progress);
+function AddProductForm() {
+  const [formData, setFormData] = useState({
+    name: "Sample Product",
+    description: "This is a sample product description.",
+    price: "19.99", // Starting with a string, will be parsed to a float later
+    sku: "SKU12345",
+    brand: "Sample Brand",
+    date_added: new Date().toISOString(), // Sets the current date and time
+    colors: [
+      {
+        color_name: "Red",
+        hex_code: "#FF0000",
+        images: [], // Initially empty, can be updated with file uploads
+        sizes_inventory: {
+          XS: { inventory: "10", price: "15.99" },
+          S: { inventory: "20", price: "17.99" },
+          M: { inventory: "30", price: "19.99" },
+          L: { inventory: "25", price: "21.99" },
+          XL: { inventory: "15", price: "23.99" },
+          XXL: { inventory: "5", price: "25.99" },
+          XXXL: { inventory: "", price: "" }, // Empty initial values
+        },
       },
-      (error) => {
-        console.error("Error uploading image:", error);
-      },
-      async () => {
-        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-        setUploadedImages((prevImages) => [...prevImages, downloadURL]); // Store the uploaded image URLs
+    ],
+    tags: [], // Example tags
+    dimensions: {
+      length: "10", // Example dimensions, assuming units are in cm
+      width: "20",
+      height: "30",
+    },
+  });
+  
+
+  const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState([]);
+  console.log(categories);
+
+  useEffect(() => {
+    // Fetch categories from Firestore and organize them
+    const fetchCategories = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "category"));
+        const categoriesList = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          categoriesList.push(data.name); // Adjust according to your data structure
+        });
+        setCategories(categoriesList);
+      } catch (error) {
+        console.error("Error fetching categories: ", error);
       }
-    );
-  };
+    };
 
-  // Handle selecting images from the gallery
-  const handleImageSelect = (image) => {
-    if (selectedImages.includes(image)) {
-      setSelectedImages(selectedImages.filter((img) => img !== image));
-    } else if (selectedImages.length < 5) {
-      setSelectedImages([...selectedImages, image]);
-    } else {
-      setErrorMessage("You can select up to 5 images.");
-    }
-  };
+    fetchCategories();
+  }, []);
 
-  // Submit the package with selected images stored in Firestore document
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (selectedImages.length < 3 || selectedImages.length > 5) {
-      setErrorMessage("Please select between 3 and 5 images.");
-      return;
-    }
-
-    try {
-      // Add package details along with image links to Firestore
-      await addDoc(collection(db, "packages"), {
-        title,
-        location,
-        category,
-        price,
-        days,
-        nights,
-        description,
-        startDate,
-        endDate,
-        mapLink,
-        rating,
-        imageLinks: selectedImages, // Store the selected image URLs array in the same document
-      });
-
-      alert("Package added successfully!");
-      setSelectedImages([]); // Clear selected images after successful submission
-    } catch (error) {
-      console.error("Error adding package: ", error);
-    }
-  };
-
-  // Open the modify popup for a package
-  const handleModify = (packageData) => {
-    setEditingPackage(packageData);
-    setIsModifyPopupOpen(true);
-  };
-
-  // Handle changes in the modify popup form
+  // Handle input change for basic product details
   const handleChange = (e) => {
-    setEditingPackage({
-      ...editingPackage,
-      [e.target.name]: e.target.value,
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleCategoryChange = (e) => {
+    const { value, checked } = e.target;
+    console.log(value);
+
+    setFormData((prevData) => ({
+      ...prevData,
+      tags: checked
+        ? [...prevData.tags, value] // Add category to tags if checked
+        : prevData.tags.filter((category) => category !== value), // Remove category if unchecked
+    }));
+  };
+
+  // Handle color and size changes
+  const handleColorChange = (index, field, value) => {
+    const updatedColors = [...formData.colors];
+    updatedColors[index][field] = value;
+    setFormData({ ...formData, colors: updatedColors });
+  };
+
+  const handleInventoryChange = (index, size, field, value) => {
+    const updatedColors = [...formData.colors];
+    updatedColors[index].sizes_inventory[size][field] = value;
+    setFormData({ ...formData, colors: updatedColors });
+  };
+
+  // Handle file uploads for color images
+  const handleImageUpload = async (index, files) => {
+    const uploadedImageURLs = [];
+    const colorId = `color_${index}_${Date.now()}`; // Unique identifier for each color's images
+
+    for (let file of files) {
+      const storageRef = ref(storage, `products/${colorId}/${file.name}`);
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+      uploadedImageURLs.push(downloadURL);
+    }
+
+    const updatedColors = [...formData.colors];
+    updatedColors[index].images = uploadedImageURLs; // Add the URLs to the color
+    setFormData({ ...formData, colors: updatedColors });
+  };
+
+  // Add a new color section
+  const addColor = () => {
+    setFormData({
+      ...formData,
+      colors: [
+        ...formData.colors,
+        {
+          color_name: "",
+          hex_code: "",
+          images: [],
+          sizes_inventory: {
+            XS: { inventory: "", price: "" },
+            S: { inventory: "", price: "" },
+            M: { inventory: "", price: "" },
+            L: { inventory: "", price: "" },
+            XL: { inventory: "", price: "" },
+            XXL: { inventory: "", price: "" },
+            XXXL: { inventory: "", price: "" },
+          },
+        },
+      ],
     });
   };
 
-  // Handle update on package modification
-  const handleUpdate = async (e) => {
+  // Remove a color section
+  const removeColor = (index) => {
+    const updatedColors = formData.colors.filter((_, i) => i !== index);
+    setFormData({ ...formData, colors: updatedColors });
+  };
+  const addProduct = async (e) => {
     e.preventDefault();
+    setLoading(true);
+  
+    // Dynamic product ID
+    const productId = `product_id_${Date.now()}`;
+  
+    // Parse numeric fields with validation
+    const parsedPrice = parseFloat(formData.price);
+    const parsedDimensions = {
+      length: parseFloat(formData.dimensions.length),
+      width: parseFloat(formData.dimensions.width),
+      height: parseFloat(formData.dimensions.height),
+    };
+  
+    // Check for valid numeric values
+    if (isNaN(parsedPrice) || parsedPrice <= 0) {
+      alert("Invalid price. Please enter a valid number greater than zero.");
+      setLoading(false);
+      return;
+    }
+  
+    if (
+      isNaN(parsedDimensions.length) || parsedDimensions.length <= 0 ||
+      isNaN(parsedDimensions.width) || parsedDimensions.width <= 0 ||
+      isNaN(parsedDimensions.height) || parsedDimensions.height <= 0
+    ) {
+      alert("Invalid dimensions. Please enter valid numbers greater than zero.");
+      setLoading(false);
+      return;
+    }
+  
     try {
-      const packageDocRef = doc(db, "packages", editingPackage.id);
-      await updateDoc(packageDocRef, editingPackage);
-      setIsModifyPopupOpen(false);
-      alert("Package updated successfully!");
+      // Add the form data to Firestore
+      await setDoc(doc(db, "products", productId), {
+        ...formData,
+        price: parsedPrice,
+        dimensions: parsedDimensions, // Only save the dimensions object
+        tags: formData.tags, // Ensure tags is an array
+        date_added: new Date().toISOString(),
+      });
+  
+      alert("Product added successfully!");
     } catch (error) {
-      console.error("Error updating package: ", error);
+      console.error("Error adding product: ", error.message);
+      alert("Failed to add product.");
+    } finally {
+      setLoading(false);
     }
   };
-
-  // Delete a package
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this package?")) {
-      await deleteDoc(doc(db, "packages", id));
-      setPackages(packages.filter((pkg) => pkg.id !== id));
-      alert("Package deleted successfully!");
-    }
-  };
+  
 
   return (
     <div className="container mx-auto p-8">
-      <h1 className="text-4xl font-semibold text-gray-900 mb-8 text-center">Add New Tour Package</h1>
-      <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <input
-            type="text"
-            className="p-3 border border-gray-800 rounded w-full"
-            placeholder="Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-          <input
-            type="text"
-            className="p-3 border border-gray-800 rounded w-full"
-            placeholder="Location"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-          />
-          <input
-            type="text"
-            className="p-3 border border-gray-800 rounded w-full"
-            placeholder="Category"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-          />
-          <input
-            type="number"
-            className="p-3 border border-gray-800 rounded w-full"
-            placeholder="Price per person"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-          />
-          <input
-            type="number"
-            className="p-3 border border-gray-800 rounded w-full"
-            placeholder="Days"
-            value={days}
-            onChange={(e) => setDays(e.target.value)}
-          />
-          <input
-            type="number"
-            className="p-3 border border-gray-800 rounded w-full"
-            placeholder="Nights"
-            value={nights}
-            onChange={(e) => setNights(e.target.value)}
-          />
-          <input
-            type="number"
-            className="p-3 border border-gray-800 rounded w-full"
-            placeholder="Rating"
-            value={rating}
-            onChange={(e) => setRating(e.target.value)}
-          />
-          <input
-            type="url"
-            className="p-3 border border-gray-800 rounded w-full"
-            placeholder="Map Link"
-            value={mapLink}
-            onChange={(e) => setMapLink(e.target.value)}
-          />
-          <input
-            type="date"
-            className="p-3 border border-gray-800 rounded w-full"
-            placeholder="Start Date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
-          <input
-            type="date"
-            className="p-3 border border-gray-800 rounded w-full"
-            placeholder="End Date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-          />
+      <h1 className="text-4xl font-semibold text-gray-900 mb-8 text-center">
+        Add New Product
+      </h1>
 
-          <button
-            type="button"
-            onClick={() => setIsPopupOpen(true)} // Open the popup for image upload
-            className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-900 transition duration-300"
-          >
-            Upload Images
-          </button>
-
-          <textarea
-            className="p-3 border border-gray-800 rounded w-full"
-            placeholder="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+      <form onSubmit={addProduct}>
+        {/* Product Basic Information */}
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">
+            Product Name
+          </label>
+          <input
+            type="text"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded"
+            placeholder="Enter product name"
           />
         </div>
-        {errorMessage && <p className="text-red-500 mt-3">{errorMessage}</p>}
-        <button type="submit" className="mt-8 bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-900 transition duration-300">
-          Add Package
-        </button>
-      </form>
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">
+            Description
+          </label>
+          <textarea
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded"
+            placeholder="Enter product description"
+          />
+        </div>
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">
+            Price
+          </label>
+          <input
+            type="number"
+            name="price"
+            value={formData.price}
+            onChange={handleChange}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded"
+            placeholder="Enter product price"
+          />
+        </div>
+        {/* SKU, Brand, Weight, Dimensions */}
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">
+            SKU
+          </label>
+          <input
+            type="text"
+            name="sku"
+            value={formData.sku}
+            onChange={handleChange}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded"
+            placeholder="Enter SKU"
+          />
+        </div>
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">
+            Brand
+          </label>
+          <input
+            type="text"
+            name="brand"
+            value={formData.brand}
+            onChange={handleChange}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded"
+            placeholder="Enter brand name"
+          />
+        </div>
+        {/* Dimensions */}
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">
+            Dimensions (length x width x height)
+          </label>
+          <input
+            type="number"
+            name="length"
+            value={formData.length}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                dimensions: { ...formData.dimensions, length: e.target.value },
+              })
+            }
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded"
+            placeholder="Enter length"
+          />
+        </div>
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">
+            Width
+          </label>
+          <input
+            type="number"
+            name="width"
+            value={formData.width}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                dimensions: { ...formData.dimensions, width: e.target.value },
+              })
+            }
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded"
+            placeholder="Enter width"
+          />
+        </div>
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">
+            Height
+          </label>
+          <input
+            type="number"
+            name="height"
+            value={formData.height}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                dimensions: { ...formData.dimensions, height: e.target.value },
+              })
+            }
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded"
+            placeholder="Enter height"
+          />
+        </div>
+        {/* Categories */}
+        <div className="mb-4">
+          <h3 className="text-lg text-black font-bold mb-2">Categories</h3>
+          <div className="grid grid-cols-2 gap-4">
+            {categories.length > 0 &&
+              categories[0].map((category, index) => (
+                <div key={index} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id={`category_${category}`}
+                    value={category.trim()} // Ensure value has no extra spaces
+                    checked={formData.tags.includes(category.trim())} // Checked state based on formData.tags
+                    onChange={handleCategoryChange} // Trigger the handleCategoryChange function
+                    className="mr-2"
+                  />
+                  <label
+                    htmlFor={`category_${category}`}
+                    className="text-gray-700"
+                  >
+                    {category.trim()}{" "}
+                    {/* Trim category name to avoid extra spaces */}
+                  </label>
+                </div>
+              ))}
+          </div>
+        </div>
+        {/* Colors */}
+        {formData.colors.map((color, index) => (
+          <div key={index} className="mb-6 p-4 border border-gray-300 rounded">
+            <button
+              type="button"
+              onClick={() => removeColor(index)}
+              className="text-red-600 hover:underline mb-4"
+            >
+              Remove Color
+            </button>
 
-      {/* Popup for uploading and selecting images */}
-      {isPopupOpen && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">
-          <div className="bg-white p-5 rounded-lg w-2/3">
-            <h2 className="text-xl font-bold mb-4">Upload and Select Images</h2>
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              Color Name
+            </label>
+            <input
+              type="text"
+              value={color.color_name}
+              onChange={(e) =>
+                handleColorChange(index, "color_name", e.target.value)
+              }
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded"
+              placeholder="Enter color name"
+            />
 
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              Hex Code
+            </label>
+            <input
+              type="text"
+              value={color.hex_code}
+              onChange={(e) =>
+                handleColorChange(index, "hex_code", e.target.value)
+              }
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded"
+              placeholder="Enter hex color code"
+            />
+
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              Images
+            </label>
             <input
               type="file"
-              className="mb-4"
-              onChange={handleImageUpload}
-              accept="image/*"
+              multiple
+              onChange={(e) =>
+                handleImageUpload(index, Array.from(e.target.files))
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded"
             />
-            <p>Upload progress: {uploadProgress}%</p>
 
-            <h3 className="text-lg font-bold mt-4">Gallery</h3>
-            <div className="grid grid-cols-3 gap-4">
-              {uploadedImages.map((image, idx) => (
-                <div
-                  key={idx}
-                  className={`p-2 border rounded cursor-pointer ${
-                    selectedImages.includes(image) ? "border-black" : "border-gray-300"
-                  }`}
-                  onClick={() => handleImageSelect(image)}
-                >
-                  <img src={image} alt="uploaded" className="w-full h-32 object-cover" />
-                </div>
+            <div className="grid grid-cols-3 gap-4 mt-2">
+              {color.images.map((image, i) => (
+                <img
+                  key={i}
+                  src={image}
+                  alt={`Color ${index} image ${i}`}
+                  className="w-full h-32 object-cover"
+                />
               ))}
             </div>
 
-            <div className="mt-4 flex justify-end">
-              <button
-                onClick={() => setIsPopupOpen(false)}
-                className="bg-black hover:bg-gray-900 text-white px-4 py-2 rounded-lg transition duration-300"
-              >
-                Close
-              </button>
+            {/* Sizes */}
+            <div className="mt-4">
+              <h4 className="text-md font-bold mb-2">Sizes</h4>
+              <div className="grid grid-cols-2 gap-4">
+                {["XS", "S", "M", "L", "XL", "XXL", "XXXL"].map((size) => (
+                  <div key={size} className="mb-2">
+                    <input
+                      type="checkbox"
+                      id={`size_${size}_${index}`}
+                      checked={color.sizes_inventory[size] ? true : false}
+                      onChange={(e) => {
+                        const updatedColors = [...formData.colors];
+                        if (e.target.checked) {
+                          updatedColors[index].sizes_inventory[size] = {
+                            inventory: "",
+                            price: "",
+                          };
+                        } else {
+                          delete updatedColors[index].sizes_inventory[size];
+                        }
+                        setFormData({ ...formData, colors: updatedColors });
+                      }}
+                    />
+                    <label
+                      htmlFor={`size_${size}_${index}`}
+                      className="ml-2 text-gray-700"
+                    >
+                      {size}
+                    </label>
+
+                    {color.sizes_inventory[size] && (
+                      <div className="grid grid-cols-2 gap-4 mt-2">
+                        <div>
+                          <label className="block text-gray-700 text-sm font-bold mb-2">
+                            Inventory
+                          </label>
+                          <input
+                            type="number"
+                            value={color.sizes_inventory[size].inventory}
+                            onChange={(e) =>
+                              handleInventoryChange(
+                                index,
+                                size,
+                                "inventory",
+                                e.target.value
+                              )
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded"
+                            placeholder="Enter inventory"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-gray-700 text-sm font-bold mb-2">
+                            Price
+                          </label>
+                          <input
+                            type="number"
+                            value={color.sizes_inventory[size].price}
+                            onChange={(e) =>
+                              handleInventoryChange(
+                                index,
+                                size,
+                                "price",
+                                e.target.value
+                              )
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded"
+                            placeholder="Enter price"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Table for Existing Packages */}
-      <div className="mt-10">
-        <h2 className="text-3xl font-semibold mb-5 text-gray-900">Existing Packages</h2>
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr>
-              <th className="border border-gray-800 p-3">Title</th>
-              <th className="border border-gray-800 p-3">Location</th>
-              <th className="border border-gray-800 p-3">Price</th>
-              <th className="border border-gray-800 p-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {packages.map((pkg) => (
-              <tr key={pkg.id}>
-                <td className="border border-gray-800 p-3">{pkg.title}</td>
-                <td className="border border-gray-800 p-3">{pkg.location}</td>
-                <td className="border border-gray-800 p-3">${pkg.price}</td>
-                <td className="border border-gray-800 p-3">
-                  <button
-                    onClick={() => handleModify(pkg)}
-                    className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-900 transition duration-300 mr-2"
-                  >
-                    Modify
-                  </button>
-                  <button
-                    onClick={() => handleDelete(pkg.id)}
-                    className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-300"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Popup for modifying package */}
-      {isModifyPopupOpen && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">
-          <div className="bg-white p-5 rounded-lg w-1/2">
-            <h2 className="text-2xl font-bold mb-4">Modify Package</h2>
-            <form onSubmit={handleUpdate}>
-              <input
-                type="text"
-                name="title"
-                className="p-3 border border-gray-800 rounded w-full mb-3"
-                placeholder="Title"
-                value={editingPackage.title}
-                onChange={handleChange}
-              />
-              <input
-                type="text"
-                name="location"
-                className="p-3 border border-gray-800 rounded w-full mb-3"
-                placeholder="Location"
-                value={editingPackage.location}
-                onChange={handleChange}
-              />
-              <input
-                type="number"
-                name="price"
-                className="p-3 border border-gray-800 rounded w-full mb-3"
-                placeholder="Price"
-                value={editingPackage.price}
-                onChange={handleChange}
-              />
-              <textarea
-                name="description"
-                className="p-3 border border-gray-800 rounded w-full mb-3"
-                placeholder="Description"
-                value={editingPackage.description}
-                onChange={handleChange}
-              />
-              <div className="flex justify-end">
-                <button type="submit" className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-900 transition duration-300">
-                  Update Package
-                </button>
-                <button
-                  onClick={() => setIsModifyPopupOpen(false)}
-                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 ml-3 rounded-lg transition duration-300"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+        ))}
+        <button
+          type="button"
+          className="w-full bg-gray-600 text-white px-4 py-2 rounded mb-4"
+          onClick={addColor}
+        >
+          Add Another Color
+        </button>
+        <button
+          type="submit"
+          className="w-full bg-blue-600 text-white px-4 py-2 rounded"
+          disabled={loading}
+        >
+          {loading ? "Adding Product..." : "Add Product"}
+        </button>
+      </form>
     </div>
   );
 }
 
-export default AddPackage;
+export default AddProductForm;
