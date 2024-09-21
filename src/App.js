@@ -7,6 +7,7 @@ import ManageBookings from "./components/ManageBookings";
 import ManageCoupons from "./components/ManageCoupons";
 import ProductList from "./components/ProductList.js";
 import Category from "./components/Category.js";
+import ManageOrder from "./components/manageOrder.js";
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
         <Route path="/category" element={<Category />} />
         <Route path="/manage-bookings" element={<ManageBookings />} />
         <Route path="/manage-coupons" element={<ManageCoupons />} />
+        <Route path="/manage-orders" element={<ManageOrder />} />
       </Routes>
     </Router>
   );

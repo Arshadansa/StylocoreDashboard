@@ -97,6 +97,12 @@ function Dashboard() {
               Add Category
             </Link>
             <Link
+              to="/manage-orders"
+              className="border border-gray-800 text-gray-800 p-6 rounded-lg text-center transition-transform transform hover:scale-105 hover:bg-gray-800 hover:text-white"
+            >
+              Manage Order
+            </Link>
+            <Link
               to="/manage-bookings"
               className="border border-gray-800 text-gray-800 p-6 rounded-lg text-center transition-transform transform hover:scale-105 hover:bg-gray-800 hover:text-white"
             >
