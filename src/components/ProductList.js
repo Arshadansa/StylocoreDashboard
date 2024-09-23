@@ -181,7 +181,7 @@ const ProductList = () => {
   return (
     <div className="max-w-screen-xl mx-auto bg-white p-8 rounded-lg shadow-md">
       <h2 className="text-2xl font-semibold text-center text-gray-800 mb-6">
-        Total Product List - {products.length}
+        Total Product List - {products?.length}
       </h2>
 
       {products.length === 0 ? (

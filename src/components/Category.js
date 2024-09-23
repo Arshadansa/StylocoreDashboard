@@ -110,7 +110,7 @@ function Category() {
 
   return (
     <div className="container mx-auto p-8">
-      <h1 className="text-4xl font-semibold text-gray-900 mb-10 text-center">Manage Categories</h1>
+      <h1 className="text-4xl font-semibold text-gray-900 mb-10 text-center">Manage Categories {categories?.length}</h1>
 
       {/* Add Category Form */}
       <form onSubmit={addCategory} className="mb-10">

@@ -58,7 +58,7 @@ function ManageOrder() {
 
   return (
     <div className="p-4">
-      <h1 className="text-xl text-center font-bold mb-4">Manage Orders</h1>
+      <h1 className="text-xl text-center font-bold mb-4">Manage Orders {filteredOrders?.length}</h1>
 
       {/* Search bar */}
       <input
