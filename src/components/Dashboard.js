@@ -47,8 +47,8 @@ function Dashboard() {
 
       {/* Login Popup */}
       {showLogin && !isLoggedIn && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">
-          <div className="bg-white p-8 rounded-lg w-1/3 shadow-lg">
+        <div className="fixed inset-0 bg-gray-600 p-3 md:p-0 bg-opacity-50 flex justify-center items-center">
+          <div className="bg-white p-8 rounded-lg md:w-1/3 shadow-lg">
             <h2 className="text-2xl font-bold mb-4">Admin Login</h2>
             <input
               type="email"
