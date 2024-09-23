@@ -17,8 +17,8 @@ function App() {
         <Route path="/add-product" element={<AddPackage />} />
         <Route path="/update-product" element={<ProductList />} />
         <Route path="/category" element={<Category />} />
-        <Route path="/manage-bookings" element={<ManageBookings />} />
-        <Route path="/manage-coupons" element={<ManageCoupons />} />
+        {/* <Route path="/manage-bookings" element={<ManageBookings />} /> */}
+        {/* <Route path="/manage-coupons" element={<ManageCoupons />} /> */}
         <Route path="/manage-orders" element={<ManageOrder />} />
       </Routes>
     </Router>
